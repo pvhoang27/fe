@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  <style>
+    .content {
+      background: blue;
+      padding: 60px 30px;
+      border-radius: 8px;
+
+    }
+    .content ::before{
+      content: "";
+      display: block;
+      width: 120px;
+      height: 120px;
+      background: black;
+      border-radius: 50%;
+      position: absolute;
+      left: 20px;
+      right: 20px;
+    }
+
+    .content ::after{
+      content: "";
+      display: block;
+      width: 24px;
+      height: 240px;
+      background: red;
+      border-radius: 50%;
+      position: absolute;
+      left: -50px;
+      right: -50px;
+    }
+
+    .content .inner-content{
+      color: white;
+    }
+
+    .content .inner-content::first-letter{
+      font-size: 40px;
+    }
+    .content .inner-content::first-line{
+      text-transform: uppercase;
+    }
+  </style>
+
+  <div class="content">
+    <div class = "inner-content">
+      Lorem ipsum dolor sit amet, consectetur adipisicing elit. Vel, voluptates? Nisi debitis nulla, autem, impedit consequuntur cum adipisci eveniet, in numquam sed corrupti. Molestiae tenetur possimus perferendis repellendus excepturi saepe. Lorem ipsum dolor sit amet, consectetur adipisicing elit. Vel, voluptates? Nisi debitis nulla, autem, impedit consequuntur cum adipisci eveniet, in numquam sed corrupti. Molestiae tenetur possimus perferendis repellendus excepturi saepe. Lorem ipsum dolor sit amet, consectetur adipisicing elit. Vel, voluptates? Nisi debitis nulla, autem, impedit consequuntur cum adipisci eveniet, in numquam sed corrupti. Molestiae tenetur possimus perferendis repellendus excepturi saepe. Lorem ipsum dolor sit amet, consectetur adipisicing elit. Vel, voluptates? Nisi debitis nulla, autem, impedit consequuntur cum adipisci eveniet, in numquam sed corrupti. Molestiae tenetur possimus perferendis repellendus excepturi saepe. Lorem ipsum dolor sit amet, consectetur adipisicing elit. Vel, voluptates? Nisi debitis nulla, autem, impedit consequuntur cum adipisci eveniet, in numquam sed corrupti. Molestiae tenetur possimus perferendis repellendus excepturi saepe. Lorem ipsum dolor sit amet, consectetur adipisicing elit. Vel, voluptates? Nisi debitis nulla, autem, impedit consequuntur cum adipisci eveniet, in numquam sed corrupti.
+
+    </div>
+  </div>
+</body>
+</html>
