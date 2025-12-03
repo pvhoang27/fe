@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPA Simulator - Phạm Việt Hoàng</title>
+    <!-- Thư viện React và Tailwind CSS chạy trực tiếp không cần cài đặt -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        // --- ICONS (Dạng SVG để không cần cài thư viện ngoài) ---
+        const Icons = {
+            Plus: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>,
+            Trash2: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>,
+            BookOpen: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>,
+            TrendingUp: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>,
+            RefreshCw: () => <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>,
+            ArrowUpCircle: () => <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="16 12 12 8 8 12"></polyline><line x1="12" y1="16" x2="12" y2="8"></line></svg>,
+            Award: () => <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline></svg>,
+            CheckCircle: () => <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="green" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+        };
+
+        const { useState, useMemo } = React;
+
+        // --- HÀM BỔ TRỢ ---
+        const convertScore = (score10) => {
+            if (score10 >= 9.0) return { char: 'A+', val: 4.0 };
+            if (score10 >= 8.5) return { char: 'A', val: 3.7 };
+            if (score10 >= 8.0) return { char: 'B+', val: 3.5 };
+            if (score10 >= 7.0) return { char: 'B', val: 3.0 };
+            if (score10 >= 6.5) return { char: 'C+', val: 2.5 };
+            if (score10 >= 5.5) return { char: 'C', val: 2.0 };
+            if (score10 >= 5.0) return { char: 'D+', val: 1.5 };
+            if (score10 >= 4.0) return { char: 'D', val: 1.0 };
+            return { char: 'F', val: 0 };
+        };
+
+        // --- DỮ LIỆU ---
+        const INITIAL_DATA = [
+            {
+                id: 'sem_bao_luu',
+                name: 'Bảo lưu / Chuyển đổi (Tiếng Anh)',
+                subjects: [
+                { id: 'bl1', code: 'BAS1157', name: 'Tiếng Anh (Course 1)', credits: 4, score10: 10, score4: 4.0, letter: 'A+', isIncluded: true, status: 'exempt' },
+                { id: 'bl2', code: 'BAS1158', name: 'Tiếng Anh (Course 2)', credits: 4, score10: 10, score4: 4.0, letter: 'A+', isIncluded: true, status: 'exempt' },
+                { id: 'bl3', code: 'BAS1159', name: 'Tiếng Anh (Course 3)', credits: 4, score10: 10, score4: 4.0, letter: 'A+', isIncluded: true, status: 'exempt' },
+                { id: 'bl4', code: 'BAS1160', name: 'Tiếng Anh (Course 3 Plus)', credits: 2, score10: 10, score4: 4.0, letter: 'A+', isIncluded: true, status: 'exempt' },
+                ]
+            },
+            {
+                id: 'sem_1_25_26',
+                name: 'Học kỳ 1 - Năm học 2025 - 2026 (Hiện tại)',
+                subjects: [
+                { id: 's1_25_1', code: 'BAS1122', name: 'Tư tưởng Hồ Chí Minh', credits: 2, score10: 9.0, score4: 4.0, letter: 'A+', isIncluded: true, status: 'improve' },
+                { id: 's1_25_2', code: 'BAS1201', name: 'Đại số', credits: 3, score10: 0, score4: 0, letter: '?', isIncluded: true, status: 'improve' },
+                { id: 's1_25_3', code: 'INT1358', name: 'Toán rời rạc 1', credits: 3, score10: 0, score4: 0, letter: '?', isIncluded: true, status: 'improve' },
+                { id: 's1_25_4', code: 'INT1433', name: 'Lập trình mạng', credits: 3, score10: 0, score4: 0, letter: '?', isIncluded: true, status: 'retake' },
+                { id: 's1_25_5', code: 'INT1478', name: 'Đồ án tốt nghiệp', credits: 6, score10: 0, score4: 0, letter: '?', isIncluded: true, status: 'normal' },
+                { id: 's1_25_6', code: 'INT2019', name: 'Thực tập tốt nghiệp', credits: 6, score10: 0, score4: 0, letter: '?', isIncluded: true, status: 'normal' },
+                ]
+            },
+            {
+                id: 'sem_3_24_25',
+                name: 'Học kỳ 3 - Năm học 2024 - 2025',
+                subjects: [
+                { id: 's3_24_1', code: 'INT1340', name: 'Nhập môn công nghệ phần mềm', credits: 3, score10: 4.3, score4: 1.0, letter: 'D', isIncluded: true },
+                { id: 's3_24_2', code: 'INT1434', name: 'Lập trình Web', credits: 3, score10: 5.5, score4: 2.0, letter: 'C', isIncluded: true },
+                ]
+            },
+            {
+                id: 'sem_2_24_25',
+                name: 'Học kỳ 2 - Năm học 2024 - 2025',
+                subjects: [
+                { id: 's2_24_1', code: 'INT1306', name: 'Cấu trúc dữ liệu và giải thuật', credits: 3, score10: 6.0, score4: 2.0, letter: 'C', isIncluded: true },
+                { id: 's2_24_2', code: 'INT1405', name: 'Các hệ thống phân tán', credits: 3, score10: 5.0, score4: 1.5, letter: 'D+', isIncluded: true },
+                { id: 's2_24_3', code: 'INT1409', name: 'Chuyên đề hệ thống thông tin', credits: 1, score10: 6.4, score4: 2.0, letter: 'C', isIncluded: true },
+                { id: 's2_24_4', code: 'INT1418', name: 'Hệ cơ sở dữ liệu đa phương tiện', credits: 3, score10: 4.8, score4: 1.0, letter: 'D', isIncluded: true },
+                { id: 's2_24_5', code: 'INT1422', name: 'Kho dữ liệu và khai phá dữ liệu', credits: 3, score10: 5.1, score4: 1.5, letter: 'D+', isIncluded: true },
+                { id: 's2_24_6', code: 'INT1445', name: 'Phát triển hệ thống thông tin quản lý', credits: 3, score10: 7.6, score4: 3.0, letter: 'B', isIncluded: true },
+                { id: 's2_24_7', code: 'INT1446', name: 'Phát triển hệ thống thương mại điện tử', credits: 3, score10: 7.2, score4: 3.0, letter: 'B', isIncluded: true },
+                ]
+            },
+            {
+                id: 'sem_1_24_25',
+                name: 'Học kỳ 1 - Năm học 2024 - 2025',
+                subjects: [
+                { id: 's1_24_1', code: 'INT1314', name: 'Xử lý ảnh', credits: 3, score10: 8.0, score4: 3.5, letter: 'B+', isIncluded: true },
+                { id: 's1_24_2', code: 'INT1342', name: 'Phân tích và thiết kế HTTT', credits: 3, score10: 7.1, score4: 3.0, letter: 'B', isIncluded: true },
+                { id: 's1_24_3', code: 'INT1414', name: 'IoT và ứng dụng', credits: 3, score10: 7.2, score4: 3.0, letter: 'B', isIncluded: true },
+                { id: 's1_24_4', code: 'INT1415', name: 'Nhập môn khoa học dữ liệu', credits: 3, score10: 6.8, score4: 2.5, letter: 'C+', isIncluded: true },
+                { id: 's1_24_5', code: 'INT1433', name: 'Lập trình mạng', credits: 3, score10: 0.0, score4: 0.0, letter: 'F', isIncluded: true, status: 'retake' },
+                { id: 's1_24_6', code: 'INT1450', name: 'Quản lý dự án phần mềm', credits: 2, score10: 6.6, score4: 2.5, letter: 'C+', isIncluded: true },
+                { id: 's1_24_7', code: 'SKD1108', name: 'Phương pháp luận nghiên cứu khoa học', credits: 2, score10: 7.9, score4: 3.0, letter: 'B', isIncluded: true },
+                ]
+            },
+            {
+                id: 'sem_3_23_24',
+                name: 'Học kỳ 3 - Năm học 2023 - 2024',
+                subjects: [
+                { id: 's3_23_1', code: 'BAS1226', name: 'Xác suất thống kê', credits: 2, score10: 7.9, score4: 3.0, letter: 'B', isIncluded: true },
+                { id: 's3_23_2', code: 'INT1314', name: 'Kiến trúc máy tính', credits: 3, score10: 7.9, score4: 3.0, letter: 'B', isIncluded: true }
+                ]
+            },
+            {
+                id: 'sem_2_23_24',
+                name: 'Học kỳ 2 - Năm học 2023 - 2024',
+                subjects: [
+                { id: 's2_23_1', code: 'INT1303', name: 'An toàn và bảo mật HTTT', credits: 3, score10: 6.3, score4: 2.0, letter: 'C', isIncluded: true },
+                { id: 's2_23_2', code: 'INT1314', name: 'Thực tập cơ sở', credits: 3, score10: 5.5, score4: 2.0, letter: 'C', isIncluded: true },
+                { id: 's2_23_3', code: 'INT1340', name: 'NM Công nghệ phần mềm', credits: 3, score10: 2.1, score4: 0.0, letter: 'F', isIncluded: true },
+                { id: 's2_23_4', code: 'INT1341', name: 'NM Trí tuệ nhân tạo', credits: 3, score10: 8.8, score4: 3.7, letter: 'A', isIncluded: true },
+                { id: 's2_23_5', code: 'INT1414', name: 'Cơ sở dữ liệu phân tán', credits: 3, score10: 6.4, score4: 2.0, letter: 'C', isIncluded: true },
+                { id: 's2_23_6', code: 'INT1434', name: 'Lập trình Web', credits: 3, score10: 0.0, score4: 0.0, letter: 'F', isIncluded: true },
+                { id: 's2_23_7', code: 'SKD1101', name: 'Kỹ năng thuyết trình', credits: 1, score10: 8.1, score4: 3.5, letter: 'P', isIncluded: false },
+                ]
+            },
+            {
+                id: 'sem_1_23_24',
+                name: 'Học kỳ 1 - Năm học 2023 - 2024',
+                subjects: [
+                { id: 's1_23_1', code: 'BAS1153', name: 'Lịch sử Đảng cộng sản Việt Nam', credits: 2, score10: 6.7, score4: 2.5, letter: 'C+', isIncluded: true },
+                { id: 's1_23_2', code: 'BAS1160', name: 'Tiếng Anh (Course 3 Plus)', credits: 2, score10: 5.4, score4: 1.5, letter: 'D+', isIncluded: true },
+                { id: 's1_23_3', code: 'INT1313', name: 'Cơ sở dữ liệu', credits: 3, score10: 4.9, score4: 1.0, letter: 'D', isIncluded: true },
+                { id: 's1_23_4', code: 'INT1316', name: 'Lập trình với Python', credits: 3, score10: 5.2, score4: 1.5, letter: 'D+', isIncluded: true },
+                { id: 's1_23_5', code: 'INT1319', name: 'Hệ điều hành', credits: 3, score10: 8.1, score4: 3.5, letter: 'B+', isIncluded: true },
+                { id: 's1_23_6', code: 'INT1332', name: 'Lập trình hướng đối tượng', credits: 3, score10: 4.0, score4: 1.0, letter: 'D', isIncluded: true },
+                { id: 's1_23_7', code: 'INT1336', name: 'Mạng máy tính', credits: 3, score10: 6.0, score4: 2.0, letter: 'C', isIncluded: true },
+                ]
+            },
+            {
+                id: 'sem_2_22_23',
+                name: 'Học kỳ 2 - Năm học 2022 - 2023',
+                subjects: [
+                { id: 's2_22_1', code: 'BAS1122', name: 'Tư tưởng Hồ Chí Minh', credits: 2, score10: 5.2, score4: 1.5, letter: 'D+', isIncluded: true },
+                { id: 's2_22_2', code: 'BAS1159', name: 'Tiếng Anh (Course 3)', credits: 4, score10: 6.2, score4: 2.0, letter: 'C', isIncluded: true },
+                { id: 's2_22_3', code: 'ELE1319', name: 'Lý thuyết thông tin', credits: 3, score10: 8.2, score4: 3.5, letter: 'B+', isIncluded: true },
+                { id: 's2_22_4', code: 'INT1306', name: 'Cấu trúc dữ liệu và giải thuật', credits: 3, score10: 0.0, score4: 0.0, letter: 'F', isIncluded: true },
+                { id: 's2_22_5', code: 'INT1314', name: 'Kiến trúc máy tính', credits: 3, score10: 3.9, score4: 0.0, letter: 'F', isIncluded: true },
+                { id: 's2_22_6', code: 'INT1359', name: 'Toán rời rạc 2', credits: 3, score10: 6.3, score4: 2.0, letter: 'C', isIncluded: true },
+                { id: 's2_22_7', code: 'SKD1103', name: 'Kỹ năng tạo lập Văn bản', credits: 1, score10: 6.7, score4: 2.5, letter: 'P', isIncluded: false },
+                ]
+            },
+            {
+                id: 'sem_1_22_23',
+                name: 'Học kỳ 1 - Năm học 2022 - 2023',
+                subjects: [
+                { id: 's1_22_1', code: 'BAS1152', name: 'Chủ nghĩa xã hội khoa học', credits: 2, score10: 4.9, score4: 1.0, letter: 'D', isIncluded: true },
+                { id: 's1_22_2', code: 'BAS1158', name: 'Tiếng Anh (Course 2)', credits: 4, score10: 7.0, score4: 3.0, letter: 'B', isIncluded: true },
+                { id: 's1_22_3', code: 'BAS1227', name: 'Vật lý 3 và thí nghiệm', credits: 4, score10: 7.2, score4: 3.0, letter: 'B', isIncluded: true },
+                { id: 's1_22_4', code: 'ELE1330', name: 'Xử lý tín hiệu số', credits: 2, score10: 6.9, score4: 2.5, letter: 'C+', isIncluded: true },
+                { id: 's1_22_5', code: 'INT1339', name: 'Ngôn ngữ lập trình C++', credits: 3, score10: 6.2, score4: 2.0, letter: 'C', isIncluded: true },
+                { id: 's1_22_6', code: 'INT1358', name: 'Toán rời rạc 1', credits: 3, score10: 4.2, score4: 1.0, letter: 'D', isIncluded: true },
+                { id: 's1_22_7', code: 'SKD1102', name: 'Kỹ năng làm việc nhóm', credits: 1, score10: 8.0, score4: 3.5, letter: 'P', isIncluded: false },
+                ]
+            },
+            {
+                id: 'sem_2_21_22',
+                name: 'Học kỳ 2 - Năm học 2021 - 2022',
+                subjects: [
+                { id: 's2_21_1', code: 'BAS1107', name: 'Giáo dục thể chất 2', credits: 2, score10: 5.8, score4: 2.0, letter: 'P', isIncluded: false },
+                { id: 's2_21_2', code: 'BAS1151', name: 'Kinh tế chính trị Mác- Lênin', credits: 2, score10: 5.0, score4: 1.5, letter: 'D+', isIncluded: true },
+                { id: 's2_21_3', code: 'BAS1156', name: 'Học phần tiếng anh bổ trợ (Course 0)', credits: 0, score10: 7.6, score4: 3.0, letter: 'B', isIncluded: false },
+                { id: 's2_21_4', code: 'BAS1157', name: 'Tiếng Anh (Course 1)', credits: 4, score10: 6.6, score4: 2.5, letter: 'C+', isIncluded: true },
+                { id: 's2_21_5', code: 'BAS1204', name: 'Giải tích 2', credits: 3, score10: 5.5, score4: 2.0, letter: 'C', isIncluded: true },
+                { id: 's2_21_6', code: 'BAS1224', name: 'Vật lý 1 và thí nghiệm', credits: 4, score10: 5.8, score4: 2.0, letter: 'C', isIncluded: true },
+                { id: 's2_21_7', code: 'BAS1226', name: 'Xác suất thống kê', credits: 2, score10: 2.9, score4: 0.0, letter: 'F', isIncluded: true },
+                { id: 's2_21_8', code: 'ELE1433', name: 'Kỹ thuật số', credits: 2, score10: 4.6, score4: 1.0, letter: 'D', isIncluded: true },
+                { id: 's2_21_9', code: 'INT1155', name: 'Tin học cơ sở 2', credits: 2, score10: 7.4, score4: 3.0, letter: 'B', isIncluded: true },
+                ]
+            },
+            {
+                id: 'sem_1_21_22',
+                name: 'Học kỳ 1 - Năm học 2021 - 2022',
+                subjects: [
+                { id: 's1_21_1', code: 'BAS1105', name: 'Giáo dục quốc phòng', credits: 0, score10: 7.0, score4: 3.0, letter: 'P', isIncluded: false },
+                { id: 's1_21_2', code: 'BAS1106', name: 'Giáo dục thể chất 1', credits: 2, score10: 7.6, score4: 3.0, letter: 'P', isIncluded: false },
+                { id: 's1_21_3', code: 'BAS1150', name: 'Triết học Mác - Lênin', credits: 3, score10: 5.9, score4: 2.0, letter: 'C', isIncluded: true },
+                { id: 's1_21_4', code: 'BAS1201', name: 'Đại số', credits: 3, score10: 4.6, score4: 1.0, letter: 'D', isIncluded: true },
+                { id: 's1_21_5', code: 'BAS1203', name: 'Giải tích 1', credits: 3, score10: 6.4, score4: 2.0, letter: 'C', isIncluded: true },
+                { id: 's1_21_6', code: 'INT1154', name: 'Tin học cơ sở 1', credits: 2, score10: 7.2, score4: 3.0, letter: 'B', isIncluded: true },
+                ]
+            }
+        ];
+
+        function GPASimulator() {
+            const [semesters, setSemesters] = useState(INITIAL_DATA);
+            
+            const studentInfo = {
+                name: "Phạm Việt Hoàng",
+                code: "B21DCCN393",
+                class: "D21CQCN03-B"
+            };
+
+            // --- LOGIC TÍNH TOÁN CPA (QUAN TRỌNG) ---
+            const stats = useMemo(() => {
+                let allSubjects = [];
+                
+                // 1. Gom tất cả môn học lại
+                semesters.forEach(sem => {
+                    sem.subjects.forEach(sub => {
+                        if (sub.isIncluded) {
+                            allSubjects.push(sub);
+                        }
+                    });
+                });
+
+                // 2. Logic "Best Score" (Lấy điểm cao nhất cho mỗi mã môn)
+                const uniqueSubjectsMap = new Map();
+
+                allSubjects.forEach(sub => {
+                    // Chuẩn hóa mã môn (bỏ khoảng trắng)
+                    const code = sub.code.trim().toUpperCase();
+                    
+                    if (uniqueSubjectsMap.has(code)) {
+                        const existing = uniqueSubjectsMap.get(code);
+                        // Nếu điểm mới cao hơn hoặc điểm cũ là F (0)
+                        if (sub.score4 > existing.score4 || (sub.score4 === existing.score4 && sub.score10 > existing.score10)) {
+                            uniqueSubjectsMap.set(code, sub);
+                        }
+                    } else {
+                        uniqueSubjectsMap.set(code, sub);
+                    }
+                });
+
+                const uniqueSubjects = Array.from(uniqueSubjectsMap.values());
+
+                // 3. Tính toán trên danh sách môn duy nhất (đã lọc điểm cao nhất)
+                let totalCredits = 0;
+                let totalQualityPoints4 = 0;
+                let totalQualityPoints10 = 0;
+                let passedCredits = 0;
+
+                uniqueSubjects.forEach(sub => {
+                    totalCredits += sub.credits;
+                    totalQualityPoints4 += (sub.score4 * sub.credits);
+                    totalQualityPoints10 += (sub.score10 * sub.credits);
+                    if (sub.score4 > 0) {
+                        passedCredits += sub.credits;
+                    }
+                });
+
+                return {
+                    cpa4: totalCredits > 0 ? (totalQualityPoints4 / totalCredits).toFixed(2) : '0.00',
+                    cpa10: totalCredits > 0 ? (totalQualityPoints10 / totalCredits).toFixed(2) : '0.00',
+                    totalCredits,
+                    passedCredits
+                };
+            }, [semesters]);
+
+            // Xử lý thay đổi điểm
+            const handleScoreChange = (semId, subId, field, value) => {
+                const numValue = parseFloat(value);
+                
+                setSemesters(prev => prev.map(sem => {
+                    if (sem.id !== semId) return sem;
+                    return {
+                        ...sem,
+                        subjects: sem.subjects.map(sub => {
+                            if (sub.id !== subId) return sub;
+                            
+                            let updates = { [field]: isNaN(numValue) ? 0 : numValue };
+                            
+                            if (field === 'score10') {
+                                const converted = convertScore(isNaN(numValue) ? 0 : numValue);
+                                updates.score4 = converted.val;
+                                updates.letter = converted.char;
+                            }
+                            
+                            return { ...sub, ...updates };
+                        })
+                    };
+                }));
+            };
+
+            const addSubject = (semId) => {
+                const newSubject = {
+                    id: Math.random().toString(36).substr(2, 9),
+                    code: 'NEW00',
+                    name: 'Môn học mới',
+                    credits: 3,
+                    score10: 0,
+                    score4: 0,
+                    letter: 'F',
+                    isIncluded: true,
+                    status: 'normal'
+                };
+
+                setSemesters(prev => prev.map(sem => {
+                    if (sem.id !== semId) return sem;
+                    return { ...sem, subjects: [...sem.subjects, newSubject] };
+                }));
+            };
+            
+            const removeSubject = (semId, subId) => {
+                setSemesters(prev => prev.map(sem => {
+                    if (sem.id !== semId) return sem;
+                    return { ...sem, subjects: sem.subjects.filter(s => s.id !== subId)};
+                }));
+            };
+
+            const addSemester = () => {
+                const newSem = {
+                    id: `future_sem_${Date.now()}`,
+                    name: 'Học kỳ dự tính',
+                    subjects: [
+                        { id: Date.now().toString(), code: 'DATN', name: 'Đồ án tốt nghiệp', credits: 10, score10: 8.5, score4: 3.7, letter: 'A', isIncluded: true, status: 'normal' }
+                    ]
+                };
+                setSemesters([newSem, ...semesters]);
+            };
+
+            return (
+                <div className="min-h-screen bg-gray-50 p-4 font-sans text-gray-800">
+                <div className="max-w-6xl mx-auto space-y-6">
+                    
+                    {/* Header */}
+                    <div className="bg-white rounded-xl shadow-md border-t-4 border-red-700 overflow-hidden">
+                    <div className="p-6 pb-0 flex flex-col md:flex-row justify-between items-start md:items-center">
+                        <div>
+                            <h1 className="text-2xl font-bold text-red-700 flex items-center">
+                                <Icons.BookOpen className="mr-2"/> CỔNG GIẢ LẬP TÍN CHỈ (OFFLINE)
+                            </h1>
+                            <p className="text-gray-500 text-sm mt-1">Học viện Công nghệ Bưu chính Viễn thông</p>
+                        </div>
+                        <div className="mt-4 md:mt-0 text-right bg-red-50 p-3 rounded-lg border border-red-100">
+                            <div className="font-bold text-lg text-red-900">{studentInfo.name}</div>
+                            <div className="text-sm text-red-700 font-mono">{studentInfo.code}</div>
+                        </div>
+                    </div>
+                    
+                    {/* Stats Bar */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-6">
+                        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center">
+                            <div className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-1">CPA (Hệ 4)</div>
+                            <div className="text-5xl font-extrabold text-red-600">{stats.cpa4}</div>
+                            <div className="text-xs text-green-600 mt-2 flex items-center bg-green-50 px-2 py-1 rounded-full">
+                                <Icons.TrendingUp className="mr-1"/> Tích lũy
+                            </div>
+                        </div>
+                        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center">
+                            <div className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-1">CPA (Hệ 10)</div>
+                            <div className="text-4xl font-bold text-gray-700">{stats.cpa10}</div>
+                            <div className="text-xs text-gray-400 mt-2">Thang điểm 10</div>
+                        </div>
+                        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center">
+                            <div className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-1">Tín chỉ tích lũy</div>
+                            <div className="text-4xl font-bold text-blue-600">{stats.passedCredits}</div>
+                            <div className="text-xs text-blue-500 mt-2">Đã đạt (Qua môn)</div>
+                        </div>
+                        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center justify-center text-center">
+                            <div className="text-xs text-gray-500 mb-2">Logic tính toán:</div>
+                            <div className="font-semibold text-xs text-purple-700 bg-purple-50 px-3 py-1 rounded-lg border border-purple-200">
+                                Đã ưu tiên điểm Tiếng Anh A+
+                            </div>
+                            <div className="text-[10px] text-gray-400 mt-1 max-w-[150px]">
+                                Tự động lấy điểm cao nhất của mỗi mã môn
+                            </div>
+                        </div>
+                    </div>
+                    </div>
+
+                    {/* Action Bar */}
+                    <div className="flex justify-between items-center sticky top-2 z-10 bg-gray-50/90 backdrop-blur py-2">
+                        <div className="flex items-center space-x-2">
+                            <span className="text-sm font-semibold text-gray-600">Chú thích:</span>
+                            <span className="text-xs px-2 py-1 rounded bg-yellow-100 text-yellow-800 border border-yellow-200">Học lại</span>
+                            <span className="text-xs px-2 py-1 rounded bg-green-100 text-green-800 border border-green-200">Cải thiện</span>
+                            <span className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-800 border border-blue-200">Bảo lưu</span>
+                        </div>
+                        <button 
+                            onClick={addSemester}
+                            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg shadow-md flex items-center transition-all transform hover:scale-105 font-medium text-sm">
+                            <Icons.Plus className="mr-2"/> Thêm kỳ dự tính
+                        </button>
+                    </div>
+
+                    {/* Semesters List */}
+                    <div className="space-y-6 pb-20">
+                    {semesters.map((sem) => (
+                        <div key={sem.id} className={`bg-white rounded-lg shadow-sm border ${sem.id.includes('25_26') ? 'border-red-300 ring-2 ring-red-50' : 'border-gray-200'} overflow-hidden`}>
+                            <div className={`px-4 py-3 border-b flex justify-between items-center ${sem.id.includes('25_26') ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-gray-200'}`}>
+                                <div className="flex items-center">
+                                    <h3 className={`font-bold ${sem.id.includes('25_26') ? 'text-red-800' : 'text-gray-800'}`}>{sem.name}</h3>
+                                    {sem.id.includes('25_26') && <span className="ml-2 px-2 py-0.5 text-xs bg-red-600 text-white rounded-full animate-pulse">Đang học</span>}
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                    {sem.subjects.length} môn
+                                </div>
+                            </div>
+                            
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm text-left">
+                                    <thead className="text-xs text-gray-500 uppercase bg-gray-50 border-b">
+                                        <tr>
+                                            <th className="px-4 py-3 w-10">#</th>
+                                            <th className="px-4 py-3 w-24">Mã MH</th>
+                                            <th className="px-4 py-3">Tên môn học</th>
+                                            <th className="px-4 py-3 w-24 text-center">Trạng thái</th>
+                                            <th className="px-4 py-3 w-16 text-center">TC</th>
+                                            <th className="px-4 py-3 w-24 text-center">Điểm (10)</th>
+                                            <th className="px-4 py-3 w-24 text-center">Điểm (4)</th>
+                                            <th className="px-4 py-3 w-16 text-center">Chữ</th>
+                                            <th className="px-4 py-3 w-12 text-center"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {sem.subjects.map((sub, index) => (
+                                            <tr key={sub.id} className={`border-b transition-colors group ${!sub.isIncluded ? 'bg-gray-50 opacity-60' : 'hover:bg-red-50'}`}>
+                                                <td className="px-4 py-3 text-gray-400">{index + 1}</td>
+                                                <td className="px-4 py-3 font-mono text-gray-600 text-xs">
+                                                    <input 
+                                                        type="text" 
+                                                        value={sub.code}
+                                                        onChange={(e) => setSemesters(prev => prev.map(s => s.id === sem.id ? {...s, subjects: s.subjects.map(su => su.id === sub.id ? {...su, code: e.target.value} : su)} : s))}
+                                                        className="bg-transparent w-full focus:outline-none"
+                                                    />
+                                                </td>
+                                                <td className="px-4 py-3 font-medium text-gray-800 relative">
+                                                    <input 
+                                                        type="text" 
+                                                        value={sub.name}
+                                                        onChange={(e) => setSemesters(prev => prev.map(s => s.id === sem.id ? {...s, subjects: s.subjects.map(su => su.id === sub.id ? {...su, name: e.target.value} : su)} : s))}
+                                                        className="bg-transparent w-full focus:outline-none"
+                                                    />
+                                                    {!sub.isIncluded && <span className="text-[10px] text-gray-400 italic block">(Không tính GPA)</span>}
+                                                </td>
+                                                <td className="px-4 py-3 text-center">
+                                                    {sub.status === 'retake' && <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800"><Icons.RefreshCw className="mr-1"/> Học lại</span>}
+                                                    {sub.status === 'improve' && <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800"><Icons.ArrowUpCircle className="mr-1"/> Cải thiện</span>}
+                                                    {sub.status === 'exempt' && <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800"><Icons.Award className="mr-1"/> Bảo lưu</span>}
+                                                </td>
+                                                <td className="px-4 py-3 text-center">
+                                                    <input 
+                                                        type="number" 
+                                                        value={sub.credits}
+                                                        onChange={(e) => handleScoreChange(sem.id, sub.id, 'credits', e.target.value)}
+                                                        className="w-10 text-center bg-transparent border-b border-transparent focus:border-red-300 focus:outline-none"
+                                                    />
+                                                </td>
+                                                <td className="px-4 py-3 text-center">
+                                                    <input 
+                                                        type="number" 
+                                                        step="0.1"
+                                                        max="10"
+                                                        value={sub.score10}
+                                                        onChange={(e) => handleScoreChange(sem.id, sub.id, 'score10', e.target.value)}
+                                                        className={`w-14 text-center font-bold border rounded p-1 focus:ring-2 focus:ring-red-500 focus:outline-none ${sub.score10 === 0 ? 'text-gray-300' : 'text-blue-600 border-gray-200'}`}
+                                                        placeholder="0"
+                                                    />
+                                                </td>
+                                                <td className="px-4 py-3 text-center">
+                                                    <div className={`font-bold ${sub.score4 >= 3.0 ? 'text-green-600' : sub.score4 >= 2.0 ? 'text-yellow-600' : 'text-red-600'}`}>
+                                                        {sub.score4.toFixed(1)}
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3 text-center font-bold text-gray-600">
+                                                    {sub.letter}
+                                                </td>
+                                                <td className="px-4 py-3 text-center">
+                                                    <button 
+                                                        onClick={() => removeSubject(sem.id, sub.id)}
+                                                        className="text-gray-300 hover:text-red-500 transition-colors p-1 opacity-0 group-hover:opacity-100">
+                                                        <Icons.Trash2 />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div className="bg-gray-50 px-4 py-2 border-t border-gray-200">
+                                <button 
+                                    onClick={() => addSubject(sem.id)}
+                                    className="text-red-600 text-xs font-bold hover:underline flex items-center uppercase tracking-wider">
+                                    <Icons.Plus className="mr-1"/> Thêm môn học
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                    </div>
+                </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<GPASimulator />);
+    </script>
+</body>
+</html>
